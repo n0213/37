@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Orchis Secure Chat</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=Roboto:wght@300;400;700;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap');
+
+  :root {
+    --bg-main: #0d0d0d;
+    --bg-panel: #1a1a1a;
+    --primary-red: #8b0000;
+    --accent-red: #d32f2f;
+    --text-main: #f5f5f5;
+    --text-muted: #888888;
+    --border-color: #2a2a2a;
+    --font-serif: 'Playfair Display', serif;
+    --font-sans: 'Roboto', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background-color: #000; font-family: var(--font-sans);
+    color: var(--text-main); display: flex; justify-content: center; overflow: hidden;
+  }
+  ::-webkit-scrollbar { display: none; }
+
+  .app-container {
+    width: 100%; max-width: 480px; background-color: var(--bg-main);
+    height: 100vh; position: relative; box-shadow: 0 0 50px rgba(139, 0, 0, 0.1);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  .main-header {
+    padding: 20px 20px 15px; background: rgba(13, 13, 13, 0.85); backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color); position: relative; z-index: 10;
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .header-title h1 { font-family: var(--font-serif); font-size: 1.8rem; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+  .header-subtitle { font-size: 0.75rem; color: var(--primary-red); font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+  .header-actions { display: flex; gap: 15px; }
+  .action-icon { font-size: 1.4rem; cursor: pointer; transition: 0.2s; }
+  .action-icon:active { transform: scale(0.8); }
+
+  .inbox-list { flex-grow: 1; overflow-y: auto; padding-top: 10px; padding-bottom: 40px; }
+  .inbox-item { display: flex; align-items: center; padding: 16px 20px; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid rgba(255, 255, 255, 0.03); position: relative; }
+  .inbox-item:active { background: rgba(255,255,255,0.05); }
+
+  .avatar-container { position: relative; width: 54px; height: 54px; margin-right: 15px; }
+  .avatar-ring { position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(45deg, #333, #666); padding: 2px; }
+  .inbox-item.unread .avatar-ring { background: linear-gradient(45deg, var(--primary-red), #ff5252); animation: spin 4s linear infinite; }
+  .avatar-img { width: 100%; height: 100%; background-color: var(--bg-panel); border-radius: 50%; border: 2px solid var(--bg-main); display: flex; justify-content: center; align-items: center; font-size: 1.5rem; position: relative; z-index: 2; }
+  
+  .avatar-blair { background: radial-gradient(circle, #2a0808, #110000); }
+  .avatar-henry { background: radial-gradient(circle, #080b2a, #000211); }
+  .avatar-luca  { background: radial-gradient(circle, #2a1108, #110300); }
+  .avatar-albert{ background: radial-gradient(circle, #1a1a1a, #000000); }
+  .avatar-daniel{ background: radial-gradient(circle, #15082a, #050011); }
+
+  .item-content { flex-grow: 1; overflow: hidden; }
+  .item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .item-name { font-weight: 700; font-size: 1rem; color: #fff; }
+  .item-time { font-size: 0.75rem; color: var(--text-muted); }
+  .inbox-item.unread .item-time { color: var(--accent-red); font-weight: 700; }
+  .item-preview { font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .inbox-item.unread .item-preview { color: #ddd; font-weight: 700; }
+  .unread-badge { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); background: var(--accent-red); color: #fff; font-size: 0.7rem; font-weight: 900; min-width: 20px; height: 20px; border-radius: 10px; display: flex; justify-content: center; align-items: center; padding: 0 6px; box-shadow: 0 0 10px rgba(211,47,47,0.5); }
+
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+
+  .chat-screen { position: absolute; top: 0; left: 100%; width: 100%; height: 100%; background: var(--bg-main); z-index: 200; display: flex; flex-direction: column; transition: left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .chat-screen.active { left: 0; }
+  
+  .chat-header { display: flex; align-items: center; padding: 15px 20px; background: rgba(13, 13, 13, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-color); }
+  .back-btn { font-size: 1.6rem; color: var(--text-muted); cursor: pointer; margin-right: 15px; transition: color 0.2s; }
+  .back-btn:active { color: #fff; }
+  .chat-header-info { flex-grow: 1; display: flex; align-items: center; }
+  .chat-header-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--bg-panel); display: flex; justify-content: center; align-items: center; margin-right: 12px; font-size: 1rem; border: 1px solid #333; }
+  .chat-header-name { font-weight: 700; font-size: 1.05rem; color: #fff; letter-spacing: -0.2px; }
+  .chat-header-status { font-size: 0.7rem; color: var(--accent-red); margin-top: 2px; font-weight: 700; }
+
+  .chat-area { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; background: var(--bg-main); background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 15px 15px; }
+  .chat-area::-webkit-scrollbar { display: none; }
+
+  .msg-bubble { max-width: 82%; padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.4; word-break: keep-all; position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+  .msg-received { align-self: flex-start; background: var(--bg-panel); color: #fff; border-bottom-left-radius: 4px; border: 1px solid var(--border-color); }
+  .msg-sent { align-self: flex-end; background: var(--primary-red); color: #fff; border-bottom-right-radius: 4px; }
+  .msg-trans { display: block; font-family: 'Nanum Pen Script', cursive; font-size: 1.3rem; margin-top: 6px; letter-spacing: 0.5px; opacity: 0.9; }
+  .msg-received .msg-trans { color: var(--accent-red); }
+  .msg-sent .msg-trans { color: #ffcdd2; }
+
+  .typing-indicator { display: none; align-self: flex-start; background: var(--bg-panel); padding: 12px 18px; border-radius: 18px; border-bottom-left-radius: 4px; border: 1px solid var(--border-color); margin-bottom: 10px; }
+  .dot { display: inline-block; width: 6px; height: 6px; background: #666; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
+  .dot:nth-child(1) { animation-delay: -0.32s; }
+  .dot:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+  .choices-area { padding: 15px 20px 25px; background: var(--bg-main); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; }
+  .choice-btn { width: 100%; padding: 14px 18px; background: transparent; border: 1px solid #444; color: var(--text-main); border-radius: 12px; font-family: var(--font-sans); font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; text-align: left; line-height: 1.3; }
+  .choice-btn:active { background: rgba(255,255,255,0.05); border-color: #888; }
+  .choice-trans { display: block; font-family: 'Nanum Pen Script', cursive; font-size: 1.15rem; color: var(--text-muted); margin-top: 4px; font-weight: 400; }
+
+  .gossip-alert-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(139, 0, 0, 0.6); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 9999; }
+  .gossip-alert-overlay.active { display: flex; animation: alertFlash 0.15s 3; }
+  .gossip-alert-box { background: #000; width: 85%; max-width: 340px; padding: 25px 20px; border: 2px solid var(--accent-red); box-shadow: 0 0 30px rgba(255, 0, 0, 0.4); position: relative; overflow: hidden; }
+  .gossip-alert-box::before { content: 'CONFIDENTIAL'; position: absolute; top: 10px; right: -25px; background: var(--accent-red); color: #fff; font-size: 0.6rem; font-weight: 900; padding: 2px 30px; transform: rotate(45deg); }
+  .alert-header { font-family: var(--font-serif); font-size: 1.5rem; color: var(--accent-red); font-weight: 900; margin-bottom: 15px; text-transform: uppercase; animation: glitchText 2s infinite; }
+  .alert-body { font-size: 0.95rem; color: #fff; line-height: 1.5; margin-bottom: 20px; font-weight: 300; }
+  .alert-body strong { color: var(--accent-red); font-weight: 700; }
+  .alert-close-btn { width: 100%; padding: 12px; background: transparent; border: 1px solid var(--accent-red); color: var(--accent-red); font-weight: 900; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+  .alert-close-btn:active { background: var(--accent-red); color: #000; }
+
+  @keyframes alertFlash { 0% { background: rgba(255,0,0,0.8); } 50% { background: transparent; } 100% { background: rgba(139,0,0,0.6); } }
+  @keyframes glitchText { 0%, 100% { transform: translate(0); } 20% { transform: translate(-2px, 1px); } 40% { transform: translate(2px, -1px); } }
+  @keyframes glitchText { 
+    0%, 100% { transform: translate(0); } 
+    20% { transform: translate(-2px, 1px); } 
+    40% { transform: translate(2px, -1px); } 
+  }
+
+  /* 모바일 잘림 수정 */
+  .app-container {
+    height: 100vh;
+    height: 100svh;
+    height: 100dvh;
+    min-height: -webkit-fill-available;
+  }
+
+  .chat-area {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .choices-area {
+    flex: 0 0 auto;
+    max-height: 42dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(25px + env(safe-area-inset-bottom));
+  }
+
+  .choice-btn {
+    min-height: 48px;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+    touch-action: manipulation;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container" id="app">
+  
+  <header class="main-header">
+    <div class="header-title">
+      <h1>Direct</h1>
+      <div class="header-subtitle">Orchis Encrypted Network</div>
+    </div>
+    <div class="header-actions">
+      <div class="action-icon">🔍</div><div class="action-icon">⚙️</div>
+    </div>
+  </header>
+  <div class="inbox-list" id="inboxList"></div>
+
+  <div class="chat-screen" id="chatScreen">
+    <div class="chat-header">
+      <div class="back-btn" onclick="closeChat()">←</div>
+      <div class="chat-header-info">
+        <div class="chat-header-avatar" id="chatHeaderAvatar">👤</div>
+        <div>
+          <div class="chat-header-name" id="chatHeaderName">Unknown</div>
+          <div class="chat-header-status">Online</div>
+        </div>
+      </div>
+    </div>
+    <div class="chat-area" id="chatArea">
+      <div class="typing-indicator" id="typingIndicator">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+    </div>
+    <div class="choices-area" id="choicesArea"></div>
+  </div>
+
+  <div class="gossip-alert-overlay" id="gossipAlert">
+    <div class="gossip-alert-box">
+      <div class="alert-header">Gossip Target Update</div>
+      <div class="alert-body" id="alertBodyText"></div>
+      <button class="alert-close-btn" onclick="closeAlert()">Hide</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const chatData = {
+
+  // ---------------------------------------------------------
+  // [ 1. LUCA VAN HELSING ]
+  // ---------------------------------------------------------
+  luca: {
+    id: 'luca', name: 'Luca_VH', status: 'Online 🟢', avatar: '🎧', theme: 'avatar-luca',
+    preview: 'Dance for me, babe. (춤춰봐, 자기야.)', time: 'Just now', unread: true, currentNode: 'start',
+    nodes: {
+      start: {
+        msgs: [
+          { type: 'received', eng: "Hey new toy. Did you see the post?", kor: "안녕, 새 장난감. 내 포스트 봤어?" },
+          { type: 'received', eng: "You look like a trembling little rabbit right now. It's driving me crazy.", kor: "지금 당장이라도 울 것 같은 토끼 표정 하고 있겠지. 그거 상상하니까 미치겠네." },
+          { type: 'received', eng: "Don't even think about running away or hiding. I have eyes everywhere.", kor: "도망치거나 숨을 생각은 마. 네가 어딜 가든 내 눈안에 있으니까." }
+        ],
+        choices: [
+          { eng: "What do you want?", kor: "대체 나한테 원하는 게 뭐야?", next: 'luca_want' },
+          { eng: "Piss off. I'm not your toy.", kor: "꺼져. 난 네 장난감 아니야.", next: 'luca_defy' },
+          { eng: "[Ignore the message]", kor: "[메시지를 읽고 무시한다]", next: 'luca_ignore' }
+        ]
+      },
+      luca_want: {
+        msgs: [
+          { type: 'received', eng: "You. Every single part of you. Right now. Come to the gym locker room.", kor: "너. 네 모든 것. 지금 당장 체육관 제일 구석에 있는 락커룸으로 와." },
+          { type: 'received', eng: "Don't make me wait. You know I lack patience.", kor: "기다리게 하지 마. 나 인내심 바닥인 거 알잖아." }
+        ],
+        choices: [
+          { eng: "Why should I go there? Are you crazy?", kor: "내가 거길 왜 가. 너 진짜 미쳤어?", next: 'luca_want_refuse' },
+          { eng: "Everyone is looking. We'll get caught.", kor: "다른 애들 다 보는데? 들키면 어쩌려고.", next: 'luca_want_secret' },
+          { eng: "Fine. But don't try anything.", kor: "알았어. 대신 이상한 짓 하지 마.", next: 'luca_want_agree' }
+        ]
+      },
+      luca_want_refuse: {
+        msgs: [
+          { type: 'received', eng: "Refusing me? That's cute. But actions have consequences.", kor: "내 명령을 거절해? 귀엽네. 하지만 대가는 치러야지." },
+          { type: 'received', eng: "If you don't come, I'll drag you out by your hair in front of everyone.", kor: "안 오면, 애들 다 보는 앞에서 네 머리채를 끌고라도 데려올 거니까." }
+        ],
+        choices: [
+          { eng: "You wouldn't dare.", kor: "네가 감히 그러겠어.", next: 'luca_want_smash' },
+          { eng: "Okay, I'm going! Just stay there.", kor: "알았어, 간다고! 거기 가만히 있어.", next: 'luca_locker_arrive' }
+        ]
+      },
+      luca_want_smash: {
+        msgs: [
+          { type: 'received', eng: "Look out the window, babe. See that bat in my hand?", kor: "창밖을 봐, 자기야. 내 손에 들린 배트 보여?" },
+          { type: 'received', eng: "I'm heading to your classroom. I'm counting to three. 1... 2...", kor: "네 교실로 가는 중이야. 셋 센다. 1... 2..." }
+        ],
+        choices: [
+          { eng: "Wait! I'll go down!", kor: "잠깐! 내가 내려갈게!", next: 'luca_locker_arrive' },
+          { eng: "You're a psycho.", kor: "너 진짜 사이코구나.", next: 'luca_psycho_end' }
+        ]
+      },
+      luca_want_secret: {
+        msgs: [
+          { type: 'received', eng: "That makes it more thrilling, doesn't it? The risk of getting caught.", kor: "들킬지도 모른다는 거. 그래서 더 짜릿하잖아. 안 그래?" },
+          { type: 'received', eng: "Besides, who in this school would dare to stop me?", kor: "어차피 이 학교에서 날 막을 수 있는 새끼는 없어." }
+        ],
+        choices: [
+          { eng: "What about Blair?", kor: "블레어는 어쩌고?", next: 'luca_secret_blair' },
+          { eng: "I'm on my way.", kor: "가는 중이야.", next: 'luca_locker_arrive' }
+        ]
+      },
+      luca_secret_blair: {
+        msgs: [
+          { type: 'received', eng: "Blair? Don't make me laugh. She's just a noisy parrot.", kor: "블레어? 웃기지 마. 걘 그냥 시끄러운 앵무새일 뿐이니까." },
+          { type: 'received', eng: "I'm only interested in you right now. 1 minute left.", kor: "지금 내 관심은 오직 너 하나뿐이야. 1분 남았어." }
+        ],
+        choices: [
+          { eng: "[Run to the locker room]", kor: "[락커룸으로 뛰어간다]", next: 'luca_locker_arrive' }
+        ]
+      },
+      luca_want_agree: {
+        msgs: [
+          { type: 'received', eng: "Good girl. Lock the door when you come in.", kor: "착하네. 들어올 때 문 확실하게 잠가." },
+          { type: 'received', eng: "And take off that annoying tie. I don't like it.", kor: "그리고 그 거슬리는 넥타이 풀고 와. 맘에 안 드니까." }
+        ],
+        choices: [
+          { eng: "I won't take it off.", kor: "넥타이는 안 풀 거야.", next: 'luca_locker_tie' },
+          { eng: "[Arrive at the locker room]", kor: "[락커룸에 도착한다]", next: 'luca_locker_arrive' }
+        ]
+      },
+      luca_locker_tie: {
+        msgs: [
+          { type: 'received', eng: "Then I'll just have to rip it off myself.", kor: "그럼 내 손으로 직접 찢어발기는 수밖에." }
+        ],
+        choices: [
+          { eng: "...", kor: "...", next: 'luca_locker_arrive' }
+        ]
+      },
+      luca_locker_arrive: {
+        msgs: [
+          { type: 'received', eng: "You're here. You're shaking. So pretty.", kor: "왔네. 떨고 있잖아. 진짜 예쁘다." },
+          { type: 'received', eng: "Come closer. Sit on my lap.", kor: "더 가까이 와. 내 무릎 위에 앉아." }
+        ],
+        choices: [
+          { eng: "No. Tell me what you want first.", kor: "싫어. 원하는 게 뭔지 먼저 말해.", next: 'luca_locker_lap_refuse' },
+          { eng: "[Hesitantly step closer]", kor: "[머뭇거리며 다가간다]", next: 'luca_locker_lap_accept' }
+        ]
+      },
+      luca_locker_lap_refuse: {
+        msgs: [
+          { type: 'received', eng: "I told you I lack patience. I'll pull you in.", kor: "인내심 없다고 했을 텐데. 내가 끌어당기지." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'luca_end' }]
+      },
+      luca_locker_lap_accept: {
+        msgs: [
+          { type: 'received', eng: "Good. Now let me smell your neck.", kor: "좋아. 이제 네 목덜미 냄새 좀 맡게 해줘." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'luca_end' }]
+      },
+      luca_defy: {
+        msgs: [
+          { type: 'received', eng: "Feisty. I bloody like that. It makes me want to break you more.", kor: "반항적이네. 존나 맘에 들어. 짓밟고 싶어지게." },
+          { type: 'received', eng: "But you'll regret acting so tough when I finally pin you down.", kor: "하지만 내가 널 벽에 밀어붙였을 때도 그렇게 센 척할 수 있을까?" }
+        ],
+        choices: [
+          { eng: "Try it if you can.", kor: "어디 한 번 잡아보든가.", next: 'luca_defy_provoke' },
+          { eng: "Stop obsessing over me.", kor: "나한테 집착 좀 그만해.", next: 'luca_defy_obsess' }
+        ]
+      },
+      luca_defy_provoke: {
+        msgs: [
+          { type: 'received', eng: "You really don't know your place. Turn around.", kor: "주제 파악을 전혀 못 하네. 뒤돌아봐." },
+          { type: 'received', eng: "I'm right behind you, breathing down your neck.", kor: "나 지금 바로 네 뒤에서, 네 목덜미에 숨결 닿을 거리에 있거든." }
+        ],
+        choices: [
+          { eng: "[Hold breath and turn around]", kor: "[숨을 죽이고 뒤를 돌아본다]", next: 'luca_provoke_caught' },
+          { eng: "I'm not falling for that.", kor: "그런 속임수에 안 넘어가.", next: 'luca_provoke_stubborn' }
+        ]
+      },
+      luca_provoke_caught: {
+        msgs: [
+          { type: 'received', eng: "Gotcha. Did you really think I was joking?", kor: "잡았다. 내가 진짜 장난치는 줄 알았어?" },
+          { type: 'received', eng: "Your waist is so thin. It fits perfectly in one hand.", kor: "허리 진짜 얇네. 한 손에 완벽하게 감기잖아." }
+        ],
+        choices: [{ eng: "Let go of me!", kor: "이거 놔!", next: 'luca_end' }]
+      },
+      luca_provoke_stubborn: {
+        msgs: [
+          { type: 'received', eng: "Then I'll just have to wrap my arms around your waist from behind.", kor: "그럼 뒤에서 네 허리를 안아버리는 수밖에." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'luca_end' }]
+      },
+      luca_defy_obsess: {
+        msgs: [
+          { type: 'received', eng: "Obsessing? Oh, sweetie. You have no idea what real obsession looks like.", kor: "집착? 오, 자기야. 넌 아직 진짜 집착이 뭔지 몰라." },
+          { type: 'received', eng: "I'll show you at my private pool party this weekend.", kor: "이번 주말 내 프라이빗 풀파티에서 똑똑히 보여줄게." }
+        ],
+        choices: [
+          { eng: "I'm not going to your stupid party.", kor: "네 멍청한 파티 따위 안 가.", next: 'luca_party_refuse' },
+          { eng: "Is that an invitation?", kor: "그거 초대장이야?", next: 'luca_party_invite' }
+        ]
+      },
+      luca_party_refuse: {
+        msgs: [
+          { type: 'received', eng: "You don't have a choice. I already sent a dress to your dorm.", kor: "네게 선택권은 없어. 이미 네 기숙사에 드레스 보냈거든." },
+          { type: 'received', eng: "Wear it. Or I'll come dress you myself.", kor: "입고 와. 아니면 내가 직접 입혀줄 테니까." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'luca_end' }]
+      },
+      luca_party_invite: {
+        msgs: [
+          { type: 'received', eng: "It's an absolute command. Bring a swimsuit.", kor: "절대적인 명령이야. 수영복 챙겨와." },
+          { type: 'received', eng: "I want to see you soaked and shivering.", kor: "물에 젖어서 떠는 모습을 보고 싶거든." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'luca_end' }]
+      },
+      luca_ignore: {
+        msgs: [
+          { type: 'received', eng: "Ignoring my message? You really are asking for it.", kor: "내 연락을 씹어? 진짜 제대로 미쳤구나." },
+          { type: 'received', eng: "I'm walking to your classroom right now. Pray I don't kick the door in.", kor: "지금 네 교실로 걸어가고 있어. 내가 문짝 부수고 들어가지 않게 기도나 해." }
+        ],
+        choices: [
+          { eng: "Wait, don't come! I'm sorry!", kor: "잠깐, 오지 마! 내가 미안해!", next: 'luca_ignore_panic' },
+          { eng: "I didn't see it. I was in class.", kor: "아깐 못 봤어. 수업 중이었어.", next: 'luca_ignore_lie' }
+        ]
+      },
+      luca_ignore_panic: {
+        msgs: [
+          { type: 'received', eng: "Too late. I'm already at the back door.", kor: "너무 늦었어. 이미 뒷문 앞이거든." },
+          { type: 'received', eng: "Come out quietly before I make a scene.", kor: "내가 난장판 만들기 전에 조용히 네 발로 나와." }
+        ],
+        choices: [
+          { eng: "I hate you.", kor: "너 진짜 끔찍하게 싫어.", next: 'luca_panic_hate' },
+          { eng: "[Walk out the back door]", kor: "[뒷문으로 걸어 나간다]", next: 'luca_panic_out' }
+        ]
+      },
+      luca_panic_hate: {
+        msgs: [
+          { type: 'received', eng: "Keep hating me. Show me that disgust in your eyes. It turns me on.", kor: "계속 미워해 봐. 그 경멸하는 눈빛, 존나 흥분되니까." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'luca_end' }]
+      },
+      luca_panic_out: {
+        msgs: [
+          { type: 'received', eng: "Good choice. Now grab my hand.", kor: "현명한 선택이야. 자, 내 손잡아." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'luca_end' }]
+      },
+      luca_ignore_lie: {
+        msgs: [
+          { type: 'received', eng: "Those lying lips are quite pretty.", kor: "거짓말하는 입술이 참 예쁘네." },
+          { type: 'received', eng: "I wonder what else they can do. Should we find out?", kor: "그 입술로 또 뭘 할 수 있을지 궁금한데. 한 번 확인해 볼까?" }
+        ],
+        choices: [
+          { eng: "Don't come near me.", kor: "가까이 오지 마.", next: 'luca_lie_near' }
+        ]
+      },
+      luca_lie_near: {
+        msgs: [
+          { type: 'received', eng: "I'm going to ruin you until you can only say my name.", kor: "내 이름밖에 부르지 못할 때까지 널 철저하게 망가뜨려 줄게." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'luca_end' }]
+      },
+      luca_psycho_end: {
+        msgs: [
+          { type: 'received', eng: "Yeah, I am. And you're mine.", kor: "어, 나 사이코 맞아. 그리고 넌 내 거고." }
+        ],
+        choices: []
+      },
+      luca_end: { msgs: [], choices: [] }
+    }
+  },
+
+  // ---------------------------------------------------------
+  // [ 2. HENRY GRAYSON ]
+  // ---------------------------------------------------------
+  henry: {
+    id: 'henry', name: 'Henry_G', status: 'In a match 🏈', avatar: '🏈', theme: 'avatar-henry',
+    preview: 'Where are you? (어디야?)', time: '2m ago', unread: true, currentNode: 'start',
+    nodes: {
+      start: {
+        msgs: [
+          { type: 'received', eng: "Where are you? Send me your location right now.", kor: "지금 어디야? 당장 위치 찍어." },
+          { type: 'received', eng: "I specifically told you not to hang out near Luca's territory.", kor: "내가 분명히 루카 그 미친새끼 구역 근처에는 얼쩡거리지도 말라고 경고했을 텐데." },
+          { type: 'received', eng: "Why do you never listen to me? Do you want to get hurt?", kor: "왜 그렇게 내 말을 안 들어? 진짜 다치고 싶어서 환장했어?" }
+        ],
+        choices: [
+          { eng: "Why do you care?", kor: "네가 무슨 상관인데?", next: 'henry_care' },
+          { eng: "I'll do what I want. Mind your own business.", kor: "내 맘대로 할 거야. 신경 꺼.", next: 'henry_stubborn' },
+          { eng: "Are you worried about me?", kor: "나 걱정하는 거야?", next: 'henry_flirt' }
+        ]
+      },
+      henry_care: {
+        msgs: [
+          { type: 'received', eng: "Don't misunderstand. I just don't want Blair to get annoyed because of you.", kor: "오해하지 마. 그냥 너 때문에 블레어가 짜증 내는 게 싫을 뿐이니까." },
+          { type: 'received', eng: "If you get involved with Luca, it becomes my problem too. So stay put.", kor: "네가 루카랑 엮이면 내 골치도 아파진다고. 그러니까 얌전히 있어." }
+        ],
+        choices: [
+          { eng: "Right. Always about Blair. I get it.", kor: "알았어. 항상 블레어뿐이지. 네 소중한 여친님 심기 안 건드릴게.", next: 'henry_care_blair' },
+          { eng: "Liar. You were looking at me earlier.", kor: "거짓말. 너 아까 복도에서 계속 나 쳐다봤잖아.", next: 'henry_care_caught' }
+        ]
+      },
+      henry_care_blair: {
+        msgs: [
+          { type: 'received', eng: "Do you really have to talk like that? Haa...", kor: "말을 꼭 그렇게 비꼬아서 해야겠냐? 하아..." },
+          { type: 'received', eng: "You always drive me crazy. You know exactly how to mess with my head.", kor: "넌 항상 사람을 미치게 해. 어떻게 해야 내 머릿속을 헝클어놓는지 정확히 알고 있잖아." }
+        ],
+        choices: [
+          { eng: "You're the one who started it.", kor: "먼저 시작한 건 너잖아.", next: 'henry_care_fight' },
+          { eng: "Then just leave me alone.", kor: "그럼 그냥 날 내버려 둬. 간섭하지 마.", next: 'henry_care_alone' }
+        ]
+      },
+      henry_care_fight: {
+        msgs: [
+          { type: 'received', eng: "Fine. You want to fight? Let's do this face to face.", kor: "좋아. 싸우고 싶어? 그럼 얼굴 보고 제대로 해." },
+          { type: 'received', eng: "I'm standing right outside your dorm. Open the door.", kor: "지금 네 기숙사 문 앞이야. 당장 문 열어." }
+        ],
+        choices: [
+          { eng: "I'm not opening it. Go away.", kor: "안 열어줄 거야. 돌아가.", next: 'henry_fight_door' }
+        ]
+      },
+      henry_fight_door: {
+        msgs: [
+          { type: 'received', eng: "I'll stand here all night if I have to. Or I'll just break it down.", kor: "밤새도록 여기 서 있을 수도 있어. 아니면 그냥 문을 부수고 들어가든가." },
+          { type: 'received', eng: "Open it. Now.", kor: "열어. 지금 당장." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'henry_end' }]
+      },
+      henry_care_alone: {
+        msgs: [
+          { type: 'received', eng: "You know damn well I can't do that.", kor: "내가 그럴 수 없다는 거 네가 제일 잘 알잖아." },
+          { type: 'received', eng: "Even if I try to look away, my eyes always find you.", kor: "시선을 돌리려고 해도, 내 두 눈은 항상 널 찾고 있는데 어쩌라고." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'henry_end' }]
+      },
+      henry_care_caught: {
+        msgs: [
+          { type: 'received', eng: "...Shut up. You're hallucinating.", kor: "...닥쳐. 헛것 본 거니까." },
+          { type: 'received', eng: "Just don't look at other guys. Don't smile at them. Understand?", kor: "그냥 다른 새끼들 쳐다보지 마. 웃어주지도 말고. 알아들어?" }
+        ],
+        choices: [
+          { eng: "Are you jealous right now?", kor: "너 지금 질투해?", next: 'henry_caught_jealous' },
+          { eng: "You have no right to tell me what to do.", kor: "네가 나한테 이래라저래라 할 권리 없어.", next: 'henry_caught_right' }
+        ]
+      },
+      henry_caught_jealous: {
+        msgs: [
+          { type: 'received', eng: "Yeah, maybe I am. Are you happy now?", kor: "어, 그래. 질투하는 걸지도 모르지. 이제 속이 시원해?" },
+          { type: 'received', eng: "So stop testing my patience before I really cross the line.", kor: "그러니까 내가 진짜 선을 넘기 전에 인내심 시험하는 짓 그만둬." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'henry_end' }]
+      },
+      henry_caught_right: {
+        msgs: [
+          { type: 'received', eng: "No right? I've been watching you since we were kids.", kor: "권리가 없다고? 난 어릴 때부터 널 지켜봐 왔어." },
+          { type: 'received', eng: "I'll show you exactly what right I have. Wait right there.", kor: "내가 무슨 권리가 있는지 똑똑히 보여줄게. 거기 딱 기다려." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'henry_end' }]
+      },
+      henry_stubborn: {
+        msgs: [
+          { type: 'received', eng: "You're driving me crazy. You never listen.", kor: "너 진짜 사람 미치게 하네. 더럽게 말 안 들어." },
+          { type: 'received', eng: "Stay exactly where you are. I'm skipping practice.", kor: "한 발자국도 움직이지 말고 거기 있어. 나 훈련 쨀 거니까." },
+          { type: 'received', eng: "I'm coming to get you right now.", kor: "지금 당장 널 데리러 갈 테니까." }
+        ],
+        choices: [
+          { eng: "Are you really coming? Don't!", kor: "진짜 올 거야? 오지 마!", next: 'henry_stubborn_stay' },
+          { eng: "If you come, Luca will find it more amusing.", kor: "네가 오면 루카가 더 재미있어할걸?", next: 'henry_stubborn_luca' }
+        ]
+      },
+      henry_stubborn_stay: {
+        msgs: [
+          { type: 'received', eng: "Too late. I'm already out of the locker room.", kor: "이미 늦었어. 락커룸 박차고 나왔으니까." },
+          { type: 'received', eng: "Hide somewhere until I get there. Don't you dare get hurt.", kor: "나 갈 때까지 어디 숨어있기나 해. 털끝 하나라도 다치기만 해봐." }
+        ],
+        choices: [
+          { eng: "What about your game tomorrow?", kor: "내일 경기는 어쩌고?", next: 'henry_stay_hide' },
+          { eng: "I'm running away.", kor: "나 도망갈 거야.", next: 'henry_stay_run' }
+        ]
+      },
+      henry_stay_hide: {
+        msgs: [
+          { type: 'received', eng: "Fuck the game. You're more important right now.", kor: "경기 따위 알게 뭐야. 지금은 네가 더 중요해." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'henry_end' }]
+      },
+      henry_stay_run: {
+        msgs: [
+          { type: 'received', eng: "Run. I'll catch you anyway. And when I do, you're not leaving my sight.", kor: "도망쳐 봐. 어차피 잡힐 테니까. 잡히면 두 번 다신 내 눈앞에서 못 벗어날 줄 알아." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'henry_end' }]
+      },
+      henry_stubborn_luca: {
+        msgs: [
+          { type: 'received', eng: "I don't give a damn about what that bastard thinks.", kor: "그 새끼가 재미있어하든 말든 내 알 바 아니야." },
+          { type: 'received', eng: "I won't let him touch a single hair on your head.", kor: "그 자식이 네 머리카락 한 올이라도 건드리게 안 둬." },
+          { type: 'received', eng: "Even if it ruins my life, I'll protect you.", kor: "내 인생이 엉망진창이 되더라도 널 지킬 거니까." }
+        ],
+        choices: [
+          { eng: "Henry...", kor: "헨리...", next: 'henry_luca_soft' },
+          { eng: "You're overreacting.", kor: "너 너무 오버하는 거야.", next: 'henry_luca_mad' }
+        ]
+      },
+      henry_luca_soft: {
+        msgs: [{ type: 'received', eng: "Just wait for me. Please.", kor: "그냥 나만 기다려. 제발." }],
+        choices: [{ eng: "...", kor: "...", next: 'henry_end' }]
+      },
+      henry_luca_mad: {
+        msgs: [
+          { type: 'received', eng: "Am I? You'll see how much I'm overreacting when I break his jaw.", kor: "오버라고? 내가 그 새끼 턱주가리를 박살 낼 때도 그런 말이 나오나 보자." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'henry_end' }]
+      },
+      henry_flirt: {
+        msgs: [
+          { type: 'received', eng: "...Shut up.", kor: "...닥쳐." },
+          { type: 'received', eng: "Just stay in your dorm. Don't wander around making people crazy.", kor: "그냥 기숙사에 얌전히 처박혀 있어. 돌아다니면서 사람 미치게 만들지 말고." }
+        ],
+        choices: [
+          { eng: "Make me.", kor: "네가 와서 막아보든가.", next: 'henry_flirt_push' },
+          { eng: "What if I go to Luca's party this weekend?", kor: "이번 주말에 내가 루카 파티에 가면 어쩔 건데?", next: 'henry_flirt_party' }
+        ]
+      },
+      henry_flirt_push: {
+        msgs: [
+          { type: 'received', eng: "Don't push me. I might actually go.", kor: "자극하지 마. 진짜 갈지도 모르니까." },
+          { type: 'received', eng: "And if I go, I won't just stop at stopping you.", kor: "그리고 내가 가면, 그냥 막는 걸로 안 끝나." },
+          { type: 'received', eng: "I might do something we both can't take back.", kor: "우리 둘 다 되돌릴 수 없는 짓을 저지를지도 몰라." }
+        ],
+        choices: [
+          { eng: "Like what?", kor: "예를 들면 어떤 거?", next: 'henry_push_crazy' }
+        ]
+      },
+      henry_push_crazy: {
+        msgs: [
+          { type: 'received', eng: "Like locking you in my room so no one else can see you.", kor: "아무도 널 못 보게 내 방에 가둬버린다거나." },
+          { type: 'received', eng: "I'm losing my mind. Forget I said that.", kor: "내가 진짜 미쳐가나 보다. 방금 한 말 잊어." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'henry_end' }]
+      },
+      henry_flirt_party: {
+        msgs: [
+          { type: 'received', eng: "Are you out of your fucking mind?!", kor: "너 진짜 제정신이야?!" },
+          { type: 'received', eng: "If you go anywhere near his party, I'll tear this school apart.", kor: "그 새끼 파티 근처에 1미터라도 접근하면, 이 학교 전체를 박살 내버릴 거야." }
+        ],
+        choices: [
+          { eng: "I was just joking!", kor: "농담한 거잖아!", next: 'henry_party_ruin' }
+        ]
+      },
+      henry_party_ruin: {
+        msgs: [
+          { type: 'received', eng: "I'm not joking.", kor: "난 농담 아니야." },
+          { type: 'received', eng: "Don't ever mention his name in front of me again.", kor: "다시는 내 앞에서 그 자식 이름 꺼내지 마." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'henry_end' }]
+      },
+      henry_end: { msgs: [], choices: [] }
+    }
+  },
+
+  // ---------------------------------------------------------
+  // [ 3. BLAIR WESTON ]
+  // ---------------------------------------------------------
+  blair: {
+    id: 'blair', name: 'Blair_W', status: 'Do not disturb 👑', avatar: '👑', theme: 'avatar-blair',
+    preview: 'Know your place. (주제 파악 좀 해.)', time: '10m ago', unread: true, currentNode: 'start',
+    nodes: {
+      start: {
+        msgs: [
+          { type: 'received', eng: "I saw you looking at Henry earlier. Did you think I wouldn't notice?", kor: "아까 복도에서 네가 헨리 쳐다보던 거 다 봤어. 내가 모를 줄 알았니?" },
+          { type: 'received', eng: "Know your place, trash. You don't even deserve to breathe the same air.", kor: "주제 파악 좀 해, 쓰레기야. 넌 우리랑 같은 공기 마실 자격도 없으니까." },
+          { type: 'received', eng: "If you cross the line once more, I'll make sure you get expelled.", kor: "한 번만 더 선 넘으면, 이 학교에서 영원히 치워버릴 테니까." }
+        ],
+        choices: [
+          { eng: "I wasn't looking at him. Don't misunderstand.", kor: "안 쳐다봤어. 혼자 오해하고 발작하지 마.", next: 'blair_deny' },
+          { eng: "He was looking at me first. Deal with it.", kor: "헨리가 날 먼저 본 건데 나보고 어쩌라고?", next: 'blair_provoke' },
+          { eng: "Are you feeling insecure?", kor: "너 지금 불안해서 이래?", next: 'blair_jealous' },
+          { eng: "I know about your family's secret, Blair.", kor: "네 가족의 비밀 다 알아, 블레어.", next: 'blair_blackmail' }
+        ]
+      },
+      blair_deny: {
+        msgs: [
+          { type: 'received', eng: "Liar. I saw your filthy eyes crawling all over him.", kor: "거짓말. 네 그 역겨운 눈빛이 걔한테 기어 다니는 거 다 봤거든." },
+          { type: 'received', eng: "Henry is mine. Everyone in this school knows that.", kor: "헨리는 내 거야. 이 학교 전체가 다 아는 사실이라고." }
+        ],
+        choices: [
+          { eng: "Believe what you want.", kor: "네 맘대로 생각해.", next: 'blair_deny_ignore' },
+          { eng: "I really don't care about him. You can have him.", kor: "난 진짜 헨리한테 관심 없어. 너 다 가져.", next: 'blair_deny_excuse' }
+        ]
+      },
+      blair_deny_ignore: {
+        msgs: [
+          { type: 'received', eng: "Oh, I will. And the whole school will believe me too.", kor: "오, 그럴 거야. 그리고 온 학교가 내 말을 믿겠지." },
+          { type: 'received', eng: "I just sent a little tip to the Gossip App.", kor: "방금 가십 앱에 작은 제보를 하나 보냈거든." }
+        ],
+        choices: [
+          { eng: "What did you do?!", kor: "너 무슨 짓을 한 거야?!", next: 'blair_deny_panic' }
+        ]
+      },
+      blair_deny_panic: {
+        msgs: [
+          { type: 'received', eng: "Just a picture of you stealing things from lockers.", kor: "네가 남의 락커에서 물건 훔치는 합성 사진 정도?" },
+          { type: 'received', eng: "Welcome to hell, sweetie.", kor: "지옥에 온 걸 환영해, 얘야." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'blair_end' }]
+      },
+      blair_deny_excuse: {
+        msgs: [
+          { type: 'received', eng: "I CAN HAVE HIM? You act like you gave him to me.", kor: "너 다 가져? 마치 네가 나한테 양보하는 것처럼 말하네." },
+          { type: 'received', eng: "You're really pushing my buttons today.", kor: "너 오늘 진짜 내 심기 제대로 건드린다." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'blair_end' }]
+      },
+      blair_provoke: {
+        msgs: [
+          { type: 'received', eng: "EXCUSE ME? You must have a death wish.", kor: "뭐라고? 네가 드디어 미쳐서 죽고 싶구나." },
+          { type: 'received', eng: "Are you insane? I'm going to ruin you.", kor: "미쳤어? 널 아주 산산조각 내줄게." }
+        ],
+        choices: [
+          { eng: "Try it. I won't hold back either.", kor: "해볼 테면 해봐. 나도 안 참아.", next: 'blair_fight_start' },
+          { eng: "Henry messaged me first, actually.", kor: "사실 헨리가 나한테 먼저 연락했는데.", next: 'blair_provoke_henry' }
+        ]
+      },
+      blair_fight_start: {
+        msgs: [
+          { type: 'received', eng: "Cute piece of trash. Let's see how long you last.", kor: "귀여운 쓰레기네. 어디 한 번 버텨봐." },
+          { type: 'received', eng: "No one in this school will talk to you. Not even the teachers.", kor: "이 학교의 그 누구도 너랑 말 섞지 않을 거야. 선생들도 포함해서." }
+        ],
+        choices: [
+          { eng: "I'll take everything from you. Including Henry.", kor: "네 거 전부 뺏어줄게. 헨리까지 포함해서.", next: 'blair_fight_take' }
+        ]
+      },
+      blair_fight_take: {
+        msgs: [
+          { type: 'received', eng: "YOU BITCH.", kor: "이 미친년이." },
+          { type: 'received', eng: "I swear to God, you will beg me to stop while crying blood.", kor: "맹세컨대, 너 피눈물 흘리면서 나한테 제발 그만해달라고 빌게 될 거야." },
+          { type: 'received', eng: "I'm calling Luca. He's been wanting a new toy anyway.", kor: "지금 루카한테 연락할 거야. 걔가 마침 새 장난감을 원했거든." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'blair_end' }]
+      },
+      blair_provoke_henry: {
+        msgs: [
+          { type: 'received', eng: "WHAT?", kor: "뭐라고?" },
+          { type: 'received', eng: "Send me the screenshot right now. PROVE IT.", kor: "지금 당장 캡처해서 보내. 증명하라고." }
+        ],
+        choices: [
+          { eng: "He told me to come to his dorm.", kor: "헨리가 자기 기숙사로 오라고 하던데.", next: 'blair_henry_insane' }
+        ]
+      },
+      blair_henry_insane: {
+        msgs: [
+          { type: 'received', eng: "You disgusting slut.", kor: "이 역겨운 걸레 같은 년이." },
+          { type: 'received', eng: "I'm outside his dorm right now. He's not answering.", kor: "나 지금 걔 기숙사 앞이야. 대답 안 하잖아." },
+          { type: 'received', eng: "IF YOU'RE IN THERE, OPEN THE DOOR.", kor: "너 혹시 그 안에 있으면, 당장 문 열어." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'blair_end' }]
+      },
+      blair_jealous: {
+        msgs: [
+          { type: 'received', eng: "HOW DARE YOU.", kor: "감히 네가 뭔데?" },
+          { type: 'received', eng: "I have everything. Money, looks, power, Henry.", kor: "난 다 가졌어. 돈, 외모, 권력, 헨리까지." },
+          { type: 'received', eng: "Why would I be jealous of a nobody like you?", kor: "내가 왜 너 같은 벌레를 질투하겠어?" }
+        ],
+        choices: [
+          { eng: "Because you know Henry's eyes are always on me.", kor: "헨리 시선이 항상 나한테 향하는 걸 너도 아니까.", next: 'blair_jealous_henry' },
+          { eng: "Your friends don't actually like you. They fear you.", kor: "네 친구들은 널 좋아하는 게 아니야. 무서워하는 거지.", next: 'blair_jealous_friends' }
+        ]
+      },
+      blair_jealous_henry: {
+        msgs: [
+          { type: 'received', eng: "Shut up. SHUT UP.", kor: "닥쳐. 닥치라고." },
+          { type: 'received', eng: "He pities you. That's all it is.", kor: "걘 널 동정하는 것뿐이야. 그게 다라고." }
+        ],
+        choices: [
+          { eng: "Keep telling yourself that. If it helps you sleep.", kor: "계속 그렇게 믿으면서 살아. 잠이라도 잘 오게.", next: 'blair_jealous_mad' }
+        ]
+      },
+      blair_jealous_mad: {
+        msgs: [{ type: 'received', eng: "Don't come to school tomorrow if you want to live.", kor: "살고 싶으면 내일 학교 오지 마." }],
+        choices: [{ eng: "...", kor: "...", next: 'blair_end' }]
+      },
+      blair_jealous_friends: {
+        msgs: [
+          { type: 'received', eng: "Fear is better than love.", kor: "사랑받는 것보다 두려움의 대상이 되는 게 나아." },
+          { type: 'received', eng: "At least they don't abandon you when they fear you.", kor: "적어도 무서워하면 날 버리지 못하니까." },
+          { type: 'received', eng: "Wait, I didn't mean to send that.", kor: "잠깐, 이 말 하려던 게 아니야." }
+        ],
+        choices: [
+          { eng: "Are you afraid of being abandoned?", kor: "버림받는 게 두려운 거야?", next: 'blair_jealous_break' }
+        ]
+      },
+      blair_jealous_break: {
+        msgs: [
+          { type: 'received', eng: "STOP TALKING TO ME.", kor: "나한테 말 걸지 마." },
+          { type: 'received', eng: "Block. Do not ever look at me again.", kor: "차단할 거야. 다신 내 눈에 띄지 마." }
+        ],
+        choices: [{ eng: "[User has been blocked]", kor: "[상대방이 당신을 차단했습니다]", next: 'blair_end' }]
+      },
+      blair_blackmail: {
+        msgs: [
+          { type: 'received', eng: "What the hell are you talking about.", kor: "너 지금 대체 무슨 헛소리를 하는 거야." },
+          { type: 'received', eng: "You don't know anything.", kor: "넌 아무것도 몰라." }
+        ],
+        choices: [
+          { eng: "I know about your father's affair when you were 7.", kor: "네가 7살 때 아버지 외도했던 거, 다 알아.", next: 'blair_blackmail_shock' }
+        ]
+      },
+      blair_blackmail_shock: {
+        msgs: [
+          { type: 'received', eng: "...", kor: "..." },
+          { type: 'received', eng: "Where did you hear that?", kor: "그거 누구한테 들었어?" },
+          { type: 'received', eng: "If you breathe a word of this, I will literally erase your family.", kor: "이 얘기 입 밖으로 내기만 해봐. 네 가족까지 문자 그대로 지워버릴 테니까." }
+        ],
+        choices: [
+          { eng: "Then treat me properly from now on.", kor: "그럼 앞으로 나한테 제대로 대우해.", next: 'blair_blackmail_win' }
+        ]
+      },
+      blair_blackmail_win: {
+        msgs: [
+          { type: 'received', eng: "...Fine.", kor: "...알았어." },
+          { type: 'received', eng: "But if you betray me, we both die.", kor: "하지만 네가 날 배신하면, 우리 둘 다 죽는 거야." }
+        ],
+        choices: [{ eng: "Deal.", kor: "거래 성립.", next: 'blair_end' }]
+      },
+      blair_end: { msgs: [], choices: [] }
+    }
+  },
+
+  // ---------------------------------------------------------
+  // [ 4. ALBERT RICHMOND ]
+  // ---------------------------------------------------------
+  albert: {
+    id: 'albert', name: 'Albert_R', status: 'Busy ♟️', avatar: '♟️', theme: 'avatar-albert',
+    preview: 'I have your file. (네 파일을 가지고 있어.)', time: '1h ago', unread: false,
+    currentNode: 'start',
+    nodes: {
+      start: {
+        msgs: [
+          { type: 'received', eng: "I have your student file.", kor: "네 학생 기록 파일을 가지고 있어." },
+          { type: 'received', eng: "Meet me in the student council room. Alone.", kor: "학생회실로 와. 혼자서." }
+        ],
+        choices: [
+          { eng: "What do you want from me?", kor: "나한테 원하는 게 뭐야?", next: 'albert_deal' },
+          { eng: "I'm not going.", kor: "안 갈 거야.", next: 'albert_threat' },
+          { eng: "Did you find my file interesting?", kor: "내 파일 좀 흥미로웠어?", next: 'albert_flirt' }
+        ]
+      },
+      albert_deal: {
+        msgs: [
+          { type: 'received', eng: "Compliance. That is all.", kor: "순응. 그거면 돼." },
+          { type: 'received', eng: "I need someone to report Blair's unstable movements to me.", kor: "블레어의 불안정한 움직임을 내게 보고할 사람이 필요해." }
+        ],
+        choices: [
+          { eng: "So you're using me as a spy?", kor: "그러니까 날 스파이로 쓰겠다고?", next: 'albert_spy' },
+          { eng: "And if I refuse?", kor: "내가 거절하면?", next: 'albert_threat' }
+        ]
+      },
+      albert_spy: {
+        msgs: [
+          { type: 'received', eng: "Spy is such a vulgar word. Let's call it an 'informant'.", kor: "스파이는 너무 천박한 단어네. '정보원'이라고 부르지." },
+          { type: 'received', eng: "Do this, and I will guarantee your safety in this school.", kor: "이 일을 맡는다면, 이 학교에서의 네 안전은 보장해 주겠어." }
+        ],
+        choices: [
+          { eng: "I'll do it.", kor: "할게.", next: 'albert_spy_accept' },
+          { eng: "I don't trust you.", kor: "널 못 믿겠어.", next: 'albert_spy_reject' }
+        ]
+      },
+      albert_spy_accept: {
+        msgs: [
+          { type: 'received', eng: "A wise decision. I expect daily reports.", kor: "현명한 결정이야. 매일 보고하도록 해." },
+          { type: 'received', eng: "Welcome to my chessboard.", kor: "내 체스판에 온 걸 환영해." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'albert_end' }]
+      },
+      albert_spy_reject: {
+        msgs: [
+          { type: 'received', eng: "Trust is irrelevant. You have no other choice.", kor: "신뢰는 무의미해. 네겐 다른 선택지가 없으니까." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'albert_end' }]
+      },
+      albert_threat: {
+        msgs: [
+          { type: 'received', eng: "Not a smart choice.", kor: "현명한 선택이 아니네." },
+          { type: 'received', eng: "Check the school board in 5 minutes. Your school life is over.", kor: "5분 뒤에 학교 게시판을 확인해 봐. 네 학교생활은 끝이야." }
+        ],
+        choices: [
+          { eng: "Wait, stop!", kor: "잠깐, 멈춰!", next: 'albert_beg' },
+          { eng: "Go ahead. I'll just tell everyone about your brother's drug scandal.", kor: "해봐. 난 네 형의 마약 스캔들을 동네방네 떠들 테니까.", next: 'albert_brother' }
+        ]
+      },
+      albert_beg: {
+        msgs: [
+          { type: 'received', eng: "Come to my room. Now. And beg properly.", kor: "내 방으로 와. 당장. 와서 제대로 빌어봐." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'albert_end' }]
+      },
+      albert_brother: {
+        msgs: [
+          { type: 'received', eng: "...", kor: "..." },
+          { type: 'received', eng: "Where did you hear that.", kor: "그거 누구한테 들었어." },
+          { type: 'received', eng: "Come to the student council room. NOW. Before I destroy you.", kor: "학생회실로 와. 당장. 내가 널 산산조각 내기 전에." }
+        ],
+        choices: [
+          { eng: "Beg me. Say 'Please'.", kor: "나한테 빌어봐. '제발'이라고 해보라고.", next: 'albert_brother_beg' },
+          { eng: "See you there, Mr. President.", kor: "거기서 봐, 회장님.", next: 'albert_brother_meet' }
+        ]
+      },
+      albert_brother_beg: {
+        msgs: [
+          { type: 'received', eng: "You have no idea who you're messing with.", kor: "네가 지금 누구를 건드리고 있는지 전혀 모르는군." },
+          { type: 'received', eng: "I will make you disappear without a trace.", kor: "흔적도 없이 널 지워버리겠어." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'albert_end' }]
+      },
+      albert_brother_meet: {
+        msgs: [
+          { type: 'received', eng: "I'll be waiting. And locking the door.", kor: "기다리고 있지. 문은 잠가둘 거고." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'albert_end' }]
+      },
+      albert_flirt: {
+        msgs: [
+          { type: 'received', eng: "This is not a joke. You are a variable I need to eliminate.", kor: "장난이 아니야. 넌 내가 제거해야 할 변수일 뿐이야." },
+          { type: 'received', eng: "Your unpredictable behavior is ruining my perfect plan.", kor: "네 그 예측 불가능한 행동이 내 완벽한 계획을 망치고 있다고." }
+        ],
+        choices: [
+          { eng: "Are you afraid of variables?", kor: "변수가 그렇게 무서워?", next: 'albert_variable' },
+          { eng: "I'll mess up your perfectly aligned pens.", kor: "네 그 완벽하게 정렬된 펜들, 내가 다 헝클어 놓을 거야.", next: 'albert_ocd' }
+        ]
+      },
+      albert_variable: {
+        msgs: [
+          { type: 'received', eng: "I am not afraid. I just despise imperfection.", kor: "무서운 게 아니야. 불완전한 걸 경멸할 뿐이지." },
+          { type: 'received', eng: "And you are the definition of imperfection.", kor: "그리고 넌 불완전함 그 자체고." }
+        ],
+        choices: [
+          { eng: "Then fix me, Albert.", kor: "그럼 날 고쳐보든가, 알버트.", next: 'albert_variable_fix' }
+        ]
+      },
+      albert_variable_fix: {
+        msgs: [
+          { type: 'received', eng: "...Don't tempt me.", kor: "...날 시험하지 마." },
+          { type: 'received', eng: "You might not survive my correction.", kor: "내 교정 방식을 네가 버텨내지 못할 테니까." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'albert_end' }]
+      },
+      albert_ocd: {
+        msgs: [
+          { type: 'received', eng: "Do NOT touch my desk.", kor: "내 책상엔 손대지 마." },
+          { type: 'received', eng: "I will literally expel you.", kor: "진짜로 널 퇴학시켜 버릴 거야." }
+        ],
+        choices: [
+          { eng: "Too late. I'm already in your room. Looking at them.", kor: "너무 늦었네. 나 이미 네 방에 들어와서 보고 있거든.", next: 'albert_ocd_panic' }
+        ]
+      },
+      albert_ocd_panic: {
+        msgs: [
+          { type: 'received', eng: "DON'T MOVE. I'm coming right now.", kor: "움직이지 마. 지금 당장 갈 테니까." },
+          { type: 'received', eng: "If one pen is out of place, I will tie your hands together.", kor: "펜 하나라도 자리를 벗어나 있으면, 네 두 손을 묶어버릴 거다." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'albert_end' }]
+      },
+      albert_end: { msgs: [], choices: [] }
+    }
+  },
+
+  // ---------------------------------------------------------
+  // [ 5. DANIEL LAVENDER ]
+  // ---------------------------------------------------------
+  daniel: {
+    id: 'daniel', name: 'Daniel_L', status: 'Sleeping 💤', avatar: '💤', theme: 'avatar-daniel',
+    preview: 'Stop bothering me. (귀찮게 하지 마.)', time: '3h ago', unread: false,
+    currentNode: 'start',
+    nodes: {
+      start: {
+        msgs: [
+          { type: 'received', eng: "You're too loud.", kor: "너 너무 시끄러워." },
+          { type: 'received', eng: "Your existence is bothering my sleep.", kor: "네 존재 자체가 내 수면을 방해하고 있어." }
+        ],
+        choices: [
+          { eng: "I didn't even do anything.", kor: "나 아무것도 안 했는데.", next: 'daniel_sigh' },
+          { eng: "Then stop looking at me.", kor: "그럼 날 그만 쳐다보든가.", next: 'daniel_stare' },
+          { eng: "I saw you in the library. With the sheet music.", kor: "도서관에서 봤어. 그 악보 들고 있는 거.", next: 'daniel_music' }
+        ]
+      },
+      daniel_sigh: {
+        msgs: [
+          { type: 'received', eng: "Just breathing near me is annoying.", kor: "내 근처에서 숨 쉬는 것조차 짜증 나." },
+          { type: 'received', eng: "Go somewhere else. Before I dissect your secrets.", kor: "다른 데로 가. 내가 네 비밀들을 해부해 버리기 전에." }
+        ],
+        choices: [
+          { eng: "You're crazy.", kor: "너 진짜 제정신이 아니구나.", next: 'daniel_sigh_crazy' },
+          { eng: "Sorry, I'll hold my breath then.", kor: "미안, 그럼 숨 참고 있을게.", next: 'daniel_sigh_breath' }
+        ]
+      },
+      daniel_sigh_crazy: {
+        msgs: [
+          { type: 'received', eng: "Crazy? Maybe.", kor: "미쳤다고? 그럴지도." },
+          { type: 'received', eng: "But I'm sane enough to know you cried in the empty classroom yesterday.", kor: "하지만 어제 빈 교실에서 네가 울었다는 걸 알 만큼은 제정신이지." }
+        ],
+        choices: [
+          { eng: "How do you know that?!", kor: "네가 그걸 어떻게 알아?!", next: 'daniel_sigh_know' }
+        ]
+      },
+      daniel_sigh_know: {
+        msgs: [
+          { type: 'received', eng: "I know everything.", kor: "난 모든 걸 다 아니까." },
+          { type: 'received', eng: "So be quiet.", kor: "그러니까 조용히 해." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'daniel_end' }]
+      },
+      daniel_sigh_breath: {
+        msgs: [
+          { type: 'received', eng: "...", kor: "..." },
+          { type: 'received', eng: "Don't do that. You'll pass out.", kor: "그러지 마. 기절할 테니까." },
+          { type: 'received', eng: "And carrying you to the nurse is too much work.", kor: "그리고 널 양호실까지 옮기는 건 너무 귀찮은 일이거든." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'daniel_end' }]
+      },
+      daniel_stare: {
+        msgs: [
+          { type: 'received', eng: "...", kor: "..." },
+          { type: 'received', eng: "Interesting.", kor: "흥미롭네." },
+          { type: 'received', eng: "You actually noticed me looking?", kor: "내가 쳐다보는 걸 눈치챘어?" }
+        ],
+        choices: [
+          { eng: "It's creepy. Stop stalking me.", kor: "소름 끼쳐. 스토킹 좀 그만해.", next: 'daniel_stare_stalk' },
+          { eng: "What exactly are you looking at?", kor: "대체 뭘 그렇게 보는 건데?", next: 'daniel_stare_look' }
+        ]
+      },
+      daniel_stare_stalk: {
+        msgs: [
+          { type: 'received', eng: "Stalking is a strong word.", kor: "스토킹이라니, 단어 선택이 과격하네." },
+          { type: 'received', eng: "I call it 'data collection'.", kor: "난 '데이터 수집'이라고 부르거든." },
+          { type: 'received', eng: "Like how you secretly bite your lip when you're nervous.", kor: "네가 긴장할 때 몰래 입술을 깨무는 버릇 같은 거 말이야." }
+        ],
+        choices: [
+          { eng: "You're a psycho.", kor: "너 진짜 사이코구나.", next: 'daniel_end' }
+        ]
+      },
+      daniel_stare_look: {
+        msgs: [
+          { type: 'received', eng: "Everything.", kor: "전부 다." },
+          { type: 'received', eng: "I'm trying to figure out why Luca and Henry are so obsessed with you.", kor: "루카랑 헨리가 왜 그렇게 너한테 집착하는지 분석 중이거든." },
+          { type: 'received', eng: "...And I think I'm starting to understand.", kor: "...그리고 이제 조금 알 것 같아." }
+        ],
+        choices: [
+          { eng: "Understand what?", kor: "뭘 알았다는 건데?", next: 'daniel_stare_understand' }
+        ]
+      },
+      daniel_stare_understand: {
+        msgs: [
+          { type: 'received', eng: "That I might want to ruin you myself.", kor: "나도 널 망가뜨려 보고 싶어졌다는 거." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'daniel_end' }]
+      },
+      daniel_music: {
+        msgs: [
+          { type: 'received', eng: "...", kor: "..." },
+          { type: 'received', eng: "Where did you see that.", kor: "그거 어디서 봤어." },
+          { type: 'received', eng: "Erase it from your memory. Right now.", kor: "당장 네 기억 속에서 지워." }
+        ],
+        choices: [
+          { eng: "It was actually pretty good.", kor: "사실 그 곡, 꽤 좋았어.", next: 'daniel_music_praise' },
+          { eng: "Make me.", kor: "지우게 만들어 보든가.", next: 'daniel_music_threat' }
+        ]
+      },
+      daniel_music_praise: {
+        msgs: [
+          { type: 'received', eng: "Don't pretend you understand my music.", kor: "네가 내 음악을 이해하는 척하지 마." },
+          { type: 'received', eng: "But... stay right there. Don't move.", kor: "하지만... 거기 가만히 있어. 움직이지 마." }
+        ],
+        choices: [
+          { eng: "Why? Are you coming?", kor: "왜? 오게?", next: 'daniel_music_coming' }
+        ]
+      },
+      daniel_music_coming: {
+        msgs: [
+          { type: 'received', eng: "I need to look at your face. To see if you're lying.", kor: "네 얼굴을 봐야겠어. 거짓말하는지 아닌지." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'daniel_end' }]
+      },
+      daniel_music_threat: {
+        msgs: [
+          { type: 'received', eng: "You have a death wish, don't you?", kor: "너 진짜 죽고 싶은가 보네." },
+          { type: 'received', eng: "I'm coming to the locker room. I'll silence you myself.", kor: "지금 락커룸으로 갈게. 내 손으로 네 입을 막아주지." }
+        ],
+        choices: [
+          { eng: "I'll be waiting.", kor: "기다릴게.", next: 'daniel_music_waiting' }
+        ]
+      },
+      daniel_music_waiting: {
+        msgs: [
+          { type: 'received', eng: "You better be.", kor: "기다리는 게 좋을 거야." }
+        ],
+        choices: [{ eng: "...", kor: "...", next: 'daniel_end' }]
+      },
+      daniel_end: { msgs: [], choices: [] }
+    }
+  }
+
+}; // chatData 끝
+
+  // DOM Elements
+  const inboxList = document.getElementById('inboxList');
+  const chatScreen = document.getElementById('chatScreen');
+  const chatHeaderAvatar = document.getElementById('chatHeaderAvatar');
+  const chatHeaderName = document.getElementById('chatHeaderName');
+  const chatArea = document.getElementById('chatArea');
+  const typingIndicator = document.getElementById('typingIndicator');
+  const choicesArea = document.getElementById('choicesArea');
+  const gossipAlert = document.getElementById('gossipAlert');
+  const alertBodyText = document.getElementById('alertBodyText');
+
+  let currentChatId = null;
+
+  function initInbox() {
+    inboxList.innerHTML = '';
+    for (const key in chatData) {
+      const data = chatData[key];
+      const item = document.createElement('div');
+      item.className = 'inbox-item ' + (data.unread ? 'unread' : '');
+      item.onclick = () => openChat(key);
+      item.innerHTML = `
+        <div class="avatar-container">
+          <div class="avatar-ring"></div>
+          <div class="avatar-img ${data.theme}">${data.avatar}</div>
+        </div>
+        <div class="item-content">
+          <div class="item-top"><div class="item-name">${data.name}</div><div class="item-time">${data.time}</div></div>
+          <div class="item-preview">${data.preview}</div>
+        </div>
+        ${data.unread ? '<div class="unread-badge">!</div>' : ''}
+      `;
+      inboxList.appendChild(item);
+    }
+  }
+
+  function openChat(id) {
+    currentChatId = id;
+    chatData[id].unread = false;
+    initInbox();
+    chatHeaderAvatar.innerText = chatData[id].avatar;
+    chatHeaderAvatar.className = `chat-header-avatar ${chatData[id].theme}`;
+    chatHeaderName.innerText = chatData[id].name;
+    document.querySelector('.chat-header-status').innerText = chatData[id].status;
+    chatScreen.classList.add('active');
+    renderChatHistory(id);
+  }
+
+  function closeChat() {
+    chatScreen.classList.remove('active');
+    currentChatId = null;
+    initInbox();
+  }
+
+  function renderChatHistory(id) {
+    const data = chatData[id];
+    if (!data.history) data.history = [...data.nodes[data.currentNode].msgs];
+
+    chatArea.innerHTML = '';
+    chatArea.appendChild(typingIndicator);
+
+    data.history.forEach(msg => appendMsgToDOM(msg));
+
+    renderChoices(id);
+    setTimeout(() => { chatArea.scrollTop = chatArea.scrollHeight; }, 50);
+  }
+
+  function appendMsgToDOM(msg) {
+    const div = document.createElement('div');
+    div.className = `msg-bubble msg-${msg.type}`;
+    div.innerHTML = `${msg.eng}<span class="msg-trans">(${msg.kor})</span>`;
+    chatArea.insertBefore(div, typingIndicator);
+  }
+
+  function renderChoices(id) {
+    choicesArea.innerHTML = '';
+    const node = chatData[id].nodes[chatData[id].currentNode];
+
+    if (!node.choices || node.choices.length === 0) {
+      choicesArea.innerHTML = '<div style="text-align:center; color:#666; font-size:0.85rem; padding: 10px;">[ 대화가 종료되었습니다 ]</div>';
+      setTimeout(() => triggerAlert(id), 1500);
+      return;
+    }
+
+    node.choices.forEach((choice) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.innerHTML = `${choice.eng}<span class="choice-trans">${choice.kor}</span>`;
+      btn.onclick = () => handleChoiceSelect(id, choice);
+      choicesArea.appendChild(btn);
+    });
+  }
+
+  function handleChoiceSelect(id, choice) {
+    const data = chatData[id];
+    const userMsg = { type: 'sent', eng: choice.eng, kor: choice.kor };
+    data.history.push(userMsg);
+    appendMsgToDOM(userMsg);
+
+    data.preview = choice.kor;
+    data.time = 'Just now';
+    choicesArea.innerHTML = '';
+    typingIndicator.style.display = 'block';
+    chatArea.scrollTop = chatArea.scrollHeight;
+    data.currentNode = choice.next;
+    const nextNode = data.nodes[data.currentNode];
+
+    setTimeout(() => {
+      typingIndicator.style.display = 'none';
+      if (nextNode && nextNode.msgs) {
+        nextNode.msgs.forEach(msg => {
+          data.history.push(msg);
+          appendMsgToDOM(msg);
+          data.preview = msg.kor;
+        });
+      }
+      renderChoices(id);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }, 1200 + Math.random() * 500);
+  }
+
+  function triggerAlert(id) {
+    let msg = "";
+    switch(id) {
+      case 'luca': msg = "루카 락커룸 앞에서 누군가 질질 끌려가는 소리가 들렸다던데. <strong>새 장난감이 완전히 망가진 걸까?</strong>"; break;
+      case 'henry': msg = "헨리가 기숙사에서 미친 듯이 뛰쳐나갔대. <strong>타겟을 보호하려는 걸까, 사냥하러 가는 걸까?</strong>"; break;
+      case 'blair': msg = "블레어가 심하게 빡쳤어. <strong>누군가의 인생이 실시간으로 박살 나는 걸</strong> 볼 수 있겠네."; break;
+      case 'albert': msg = "학생회실 문이 안에서 잠겼대. <strong>알버트의 체스판에서 또 한 명의 말이 먹혔나 봐.</strong>"; break;
+      case 'daniel': msg = "항상 자고 있던 다니엘이 누군가의 뒤를 밟기 시작했대. <strong>표적이 된 걸 축하해.</strong>"; break;
+    }
+    alertBodyText.innerHTML = msg;
+    gossipAlert.classList.add('active');
+  }
+
+  function closeAlert() { gossipAlert.classList.remove('active'); }
+
+  window.onload = initInbox;
+</script>
+</body>
+</html>
